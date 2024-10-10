@@ -20,36 +20,40 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::process::ExitCode;
 
+/// Turn this on to get tracing.
 const TRACE: bool = false;
 
+/// Terminals, but also non-terminals and actions.
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 #[rustfmt::skip]
 enum Token {
-    /* Terminals */
+    // Terminals
     TOp, TCp,
     TNumber,
     TPlus, TMinus, TTimes, TDivide,
     TNl, TEnd,
-    /* Non-terminals */
+    // Non-terminals
     Start,
     Expr, ExprP,
     Term, TermP,
     Fact,
     Line,
-    /* Actions */
+    // Actions
     Negate,
     Add, Subtract, Times, Divide,
     Push, Print,
 }
 use Token::*;
 
+/// Get a single character from standard input.
 fn getc() -> char {
     let mut c: [u8; 1] = [0];
     let _ = std::io::stdin().read(&mut c);
     c[0] as char
 }
 
-fn lex(c: &mut char) -> (Token, f64) {
+/// Return the next token, with an optional value.
+fn lex(c: &mut char) -> (Token, Option<f64>) {
     let mut val: f64 = 0.0;
     if *c == '\0' {
         *c = getc();
@@ -72,7 +76,7 @@ fn lex(c: &mut char) -> (Token, f64) {
                 match *c {
                     '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
                     _ => {
-                        return (TNumber, val);
+                        return (TNumber, Some(val));
                     }
                 }
             },
@@ -101,7 +105,7 @@ fn lex(c: &mut char) -> (Token, f64) {
             }
         };
         *c = '\0';
-        return (token, val);
+        return (token, None);
     }
 }
 
@@ -189,11 +193,11 @@ fn main() -> ExitCode {
     let mut stack: Vec<Token> = Vec::new();
     stack.push(Start);
     let mut c: char = '\0';
-    let mut token = lex(&mut c);
+    let (mut token, mut token_value) = lex(&mut c);
     let mut val = 0.0;
     loop {
         if TRACE {
-            print!("token {:#?}, {} stack", token.0, token.1);
+            print!("token {:#?}, {:#?} stack", token, token_value);
             for v in &stack {
                 print!(" {:#?}", v);
             }
@@ -232,30 +236,25 @@ fn main() -> ExitCode {
                     let a = value_stack.pop().unwrap();
                     println!("result = {}", a);
                 }
-                TOp
-                | TCp
-                | TNumber
-                | TPlus
-                | TMinus
-                | TTimes
-                | TDivide
-                | TNl
-                | TEnd => {
-                    if current_state != token.0 {
+                #[rustfmt::skip]
+                TOp | TCp | TNumber | TPlus | TMinus | TTimes | TDivide | TNl | TEnd => {
+                    if current_state != token {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
                     if current_state == TNumber {
-                        val = token.1
+                        val = token_value.unwrap();
+                    } else {
+                        assert_eq!(token_value, None);
                     }
-                    token = lex(&mut c);
+                    (token, token_value) = lex(&mut c);
                 }
                 _ => {
-                    if !table.contains_key(&(token.0, current_state)) {
+                    if !table.contains_key(&(token, current_state)) {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    let _new_bits = &table[&(token.0, current_state)];
+                    let _new_bits = &table[&(token, current_state)];
                     if TRACE {
                         print!("push");
                     }
