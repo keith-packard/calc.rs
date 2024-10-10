@@ -22,6 +22,7 @@ use std::io::Read;
 use std::mem;
 use std::process::ExitCode;
 
+/// Turn this on to get tracing.
 const TRACE: bool = true;
 
 trait MakeToken {
@@ -42,6 +43,7 @@ enum ETerminal {
 }
 use ETerminal::*;
 
+/// Ignore the number's value for hash and eq
 impl Hash for ETerminal {
     fn hash<H: Hasher>(&self, state: &mut H) {
         mem::discriminant(self).hash(state);
@@ -56,12 +58,6 @@ impl PartialEq for ETerminal {
 
 impl Eq for ETerminal {}
 
-impl MakeToken for ETerminal {
-    fn make_token(self) -> Token {
-        Terminal(self)
-    }
-}
-
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 enum ENonTerminal {
     Start,
@@ -73,12 +69,6 @@ enum ENonTerminal {
     Line,
 }
 use ENonTerminal::*;
-
-impl MakeToken for ENonTerminal {
-    fn make_token(self) -> Token {
-        NonTerminal(self)
-    }
-}
 
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 enum EAction {
@@ -92,12 +82,6 @@ enum EAction {
 }
 use EAction::*;
 
-impl MakeToken for EAction {
-    fn make_token(self) -> Token {
-        Action(self)
-    }
-}
-
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 enum Token {
     Terminal(ETerminal),
@@ -107,6 +91,28 @@ enum Token {
 
 use Token::*;
 
+/// Convert an ETerminal into a Token for token_vec!
+impl MakeToken for ETerminal {
+    fn make_token(self) -> Token {
+        Terminal(self)
+    }
+}
+
+/// Convert an ENonTerminal into a Token for token_vec!
+impl MakeToken for ENonTerminal {
+    fn make_token(self) -> Token {
+        NonTerminal(self)
+    }
+}
+
+/// Convert an EAction into a Token for token_vec!
+impl MakeToken for EAction {
+    fn make_token(self) -> Token {
+        Action(self)
+    }
+}
+
+/// Convert each argument into a token for easy immediates
 macro_rules! token_vec {
     () => { Vec::new() };
     ( $( $x:expr ), + ) => {
@@ -139,14 +145,11 @@ fn lex(c: &mut char) -> ETerminal {
             }
             '\0' => END,
             '\n' => NL,
-            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => loop {
+            c0 if c0.is_ascii_digit() => loop {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
                 *c = getc();
-                match *c {
-                    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
-                    _ => {
-                        return NUMBER(val);
-                    }
+                if !c.is_ascii_digit() {
+                    return NUMBER(val);
                 }
             },
             '+' => PLUS,
@@ -235,6 +238,25 @@ fn main() -> ExitCode {
         }
         match stack.pop() {
             Some(token) => match token {
+                Terminal(terminal) => {
+                    if terminal != lexeme {
+                        println!("syntax error");
+                        return ExitCode::from(1);
+                    }
+                    prev_lexeme = lexeme;
+                    lexeme = lex(&mut c);
+                }
+                NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
+                    Some(tokens) => {
+                        for token in tokens.iter().rev() {
+                            stack.push(*token)
+                        }
+                    }
+                    None => {
+                        println!("syntax error");
+                        return ExitCode::from(1);
+                    }
+                },
                 Action(action) => {
                     match action {
                         Negate => {
@@ -261,12 +283,10 @@ fn main() -> ExitCode {
                             let a = values.pop();
                             values.push(a / b);
                         }
-                        Push => {
-                            match prev_lexeme {
-                                NUMBER(x) => values.push(x),
-                                _ => panic!("Invalid state")
-                            }
-                        }
+                        Push => match prev_lexeme {
+                            NUMBER(x) => values.push(x),
+                            _ => panic!("Invalid state"),
+                        },
                         Print => {
                             let a = values.pop();
                             println!("result = {}", a);
@@ -280,25 +300,6 @@ fn main() -> ExitCode {
                         println!();
                     }
                 }
-                Terminal(terminal) => {
-                    if terminal != lexeme {
-                        println!("syntax error");
-                        return ExitCode::from(1);
-                    }
-                    prev_lexeme = lexeme;
-                    lexeme = lex(&mut c);
-                }
-                NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
-                    Some(tokens) => {
-                        for token in tokens.iter().rev() {
-                            stack.push(*token)
-                        }
-                    }
-                    None => {
-                        println!("syntax error");
-                        return ExitCode::from(1);
-                    }
-                },
             },
             None => {
                 break;
