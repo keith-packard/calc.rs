@@ -17,10 +17,10 @@
  */
 
 use std::collections::HashMap;
-use std::io::Read;
-use std::process::ExitCode;
 use std::hash::{Hash, Hasher};
+use std::io::Read;
 use std::mem;
+use std::process::ExitCode;
 
 const TRACE: bool = true;
 
@@ -54,7 +54,7 @@ impl PartialEq for ETerminal {
     }
 }
 
-impl Eq for ETerminal { }
+impl Eq for ETerminal {}
 
 impl MakeToken for ETerminal {
     fn make_token(self) -> Token {
@@ -252,7 +252,10 @@ fn main() -> ExitCode {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    match lexeme { NUMBER(x) => val = x, _ => {} }
+                    match lexeme {
+                        NUMBER(x) => val = x,
+                        _ => {}
+                    }
                     lexeme = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => {
