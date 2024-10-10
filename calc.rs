@@ -109,7 +109,7 @@ use Token::*;
 
 macro_rules! token_vec {
     () => { Vec::new() };
-    ( $( $x:expr ), * ) => {
+    ( $( $x:expr ), + ) => {
         {
             let mut temp_vec = Vec::new();
             $(
@@ -206,11 +206,11 @@ fn main() -> ExitCode {
     let mut val = 0.0;
     loop {
         if TRACE {
-            print!("lexeme {:?} stack", lexeme);
+            print!("    {:?}:", lexeme);
             for v in &stack {
                 print!(" {:?}", v);
             }
-            println!();
+            println!("");
         }
         match stack.pop() {
             Some(token) => match token {
@@ -248,9 +248,6 @@ fn main() -> ExitCode {
                     }
                 },
                 Terminal(terminal) => {
-                    if TRACE {
-                        println!("Terminal {:?} == {:?}", lexeme, terminal);
-                    }
                     if terminal != lexeme {
                         println!("syntax error");
                         return ExitCode::from(1);
@@ -259,25 +256,13 @@ fn main() -> ExitCode {
                     lexeme = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => {
-                    if TRACE {
-                        println!("NonTerminal {:?}", non_terminal);
-                    }
                     if !table.contains_key(&(lexeme, non_terminal)) {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
                     let _new_bits = &table[&(lexeme, non_terminal)];
-                    if TRACE {
-                        print!("push (");
-                    }
                     for v in _new_bits.iter().rev() {
-                        if TRACE {
-                            print!(" {:?}", *v);
-                        }
                         stack.push(*v)
-                    }
-                    if TRACE {
-                        println!(")");
                     }
                 }
             },
