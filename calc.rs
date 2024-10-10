@@ -70,16 +70,13 @@ fn lex(c: &mut char) -> (Token, Option<f64>) {
             '\n' => {
                 TNl
             }
-            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => loop {
+            '0' ..= '9' => loop {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
                 *c = getc();
-                match *c {
-                    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
-                    _ => {
-                        return (TNumber, Some(val));
-                    }
+                if !matches!(*c, '0'..='9') {
+                    return (TNumber, Some(val));
                 }
-            },
+            }
             '+' => {
                 TPlus
             }
