@@ -25,10 +25,10 @@ const TRACE: bool = false;
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 enum Token {
     /* Terminals */
-    OP, CP,
-    NUMBER,
-    PLUS, MINUS, TIMES, DIVIDE,
-    NL, END,
+    TOp, TCp,
+    TNumber,
+    TPlus, TMinus, TTimes, TDivide,
+    TNl, TEnd,
     /* Non-terminals */
     Start,
     Expr, ExprP,
@@ -44,7 +44,7 @@ enum Token {
 fn getc() -> char {
     let mut c: [u8; 1] = [0];
     let _ = std::io::stdin().read(&mut c);
-    return c[0] as char;
+    c[0] as char
 }
 
 fn lex(c: &mut char) -> (Token, f64) {
@@ -60,10 +60,10 @@ fn lex(c: &mut char) -> (Token, f64) {
 		continue;
 	    },
 	    '\0' => {
-		token = Token::END;
+		token = Token::TEnd;
 	    }
 	    '\n' => {
-		token = Token::NL;
+		token = Token::TNl;
 	    },
 	    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
 		loop {
@@ -71,27 +71,27 @@ fn lex(c: &mut char) -> (Token, f64) {
 		    *c = getc();
 		    match *c {
 			'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
-			_ => { return (Token::NUMBER, val); }
+			_ => { return (Token::TNumber, val); }
 		    }
 		} 
 	    }
 	    '+' => {
-		token = Token::PLUS;
+		token = Token::TPlus;
 	    }
 	    '-' => {
-		token = Token::MINUS;
+		token = Token::TMinus;
 	    }
 	    '*' => {
-		token = Token::TIMES;
+		token = Token::TTimes;
 	    }
 	    '/' => {
-		token = Token::DIVIDE;
+		token = Token::TDivide;
 	    }
 	    '(' => {
-		token = Token::OP;
+		token = Token::TOp;
 	    }
 	    ')' => {
-		token = Token::CP;
+		token = Token::TCp;
 	    }
 	    _ => {
 		println!("Invalid char {}", *c);
@@ -106,34 +106,34 @@ fn lex(c: &mut char) -> (Token, f64) {
 
 fn main() ->ExitCode {
     let table: HashMap<(Token,Token), Vec<Token>> = HashMap::from([
-	((Token::CP, Token::ExprP), vec![]),
-	((Token::CP, Token::TermP), vec![]),
-	((Token::DIVIDE, Token::TermP), vec![Token::DIVIDE, Token::Fact, Token::Divide, Token::TermP]),
-	((Token::END, Token::Start), vec![]),
-	((Token::MINUS, Token::Expr), vec![Token::Term, Token::ExprP]),
-	((Token::MINUS, Token::ExprP), vec![Token::MINUS, Token::Term, Token::Subtract, Token::ExprP]),
-	((Token::MINUS, Token::Fact), vec![Token::MINUS, Token::Fact, Token::Negate]),
-	((Token::MINUS, Token::Line), vec![Token::Expr, Token::Print, Token::NL]),
-	((Token::MINUS, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::MINUS, Token::Term), vec![Token::Fact, Token::TermP]),
-	((Token::MINUS, Token::TermP), vec![]),
-	((Token::NL, Token::ExprP), vec![]),
-	((Token::NL, Token::Line), vec![Token::NL,]),
-	((Token::NL, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::NL, Token::TermP), vec![]),
-	((Token::NUMBER, Token::Expr), vec![Token::Term, Token::ExprP]),
-	((Token::NUMBER, Token::Fact), vec![Token::NUMBER, Token::Push]),
-	((Token::NUMBER, Token::Line), vec![Token::Expr, Token::Print, Token::NL]),
-	((Token::NUMBER, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::NUMBER, Token::Term), vec![Token::Fact, Token::TermP]),
-	((Token::OP, Token::Expr), vec![Token::Term, Token::ExprP]),
-	((Token::OP, Token::Fact), vec![Token::OP, Token::Expr, Token::CP]),
-	((Token::OP, Token::Line), vec![Token::Expr, Token::Print, Token::NL]),
-	((Token::OP, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::OP, Token::Term), vec![Token::Fact, Token::TermP]),
-	((Token::PLUS, Token::ExprP), vec![Token::PLUS, Token::Term, Token::Add, Token::ExprP]),
-	((Token::PLUS, Token::TermP), vec![]),
-	((Token::TIMES, Token::TermP), vec![Token::TIMES, Token::Fact, Token::Times, Token::TermP])
+	((Token::TCp, Token::ExprP), vec![]),
+	((Token::TCp, Token::TermP), vec![]),
+	((Token::TDivide, Token::TermP), vec![Token::TDivide, Token::Fact, Token::Divide, Token::TermP]),
+	((Token::TEnd, Token::Start), vec![]),
+	((Token::TMinus, Token::Expr), vec![Token::Term, Token::ExprP]),
+	((Token::TMinus, Token::ExprP), vec![Token::TMinus, Token::Term, Token::Subtract, Token::ExprP]),
+	((Token::TMinus, Token::Fact), vec![Token::TMinus, Token::Fact, Token::Negate]),
+	((Token::TMinus, Token::Line), vec![Token::Expr, Token::Print, Token::TNl]),
+	((Token::TMinus, Token::Start), vec![Token::Line, Token::Start]),
+	((Token::TMinus, Token::Term), vec![Token::Fact, Token::TermP]),
+	((Token::TMinus, Token::TermP), vec![]),
+	((Token::TNl, Token::ExprP), vec![]),
+	((Token::TNl, Token::Line), vec![Token::TNl,]),
+	((Token::TNl, Token::Start), vec![Token::Line, Token::Start]),
+	((Token::TNl, Token::TermP), vec![]),
+	((Token::TNumber, Token::Expr), vec![Token::Term, Token::ExprP]),
+	((Token::TNumber, Token::Fact), vec![Token::TNumber, Token::Push]),
+	((Token::TNumber, Token::Line), vec![Token::Expr, Token::Print, Token::TNl]),
+	((Token::TNumber, Token::Start), vec![Token::Line, Token::Start]),
+	((Token::TNumber, Token::Term), vec![Token::Fact, Token::TermP]),
+	((Token::TOp, Token::Expr), vec![Token::Term, Token::ExprP]),
+	((Token::TOp, Token::Fact), vec![Token::TOp, Token::Expr, Token::TCp]),
+	((Token::TOp, Token::Line), vec![Token::Expr, Token::Print, Token::TNl]),
+	((Token::TOp, Token::Start), vec![Token::Line, Token::Start]),
+	((Token::TOp, Token::Term), vec![Token::Fact, Token::TermP]),
+	((Token::TPlus, Token::ExprP), vec![Token::TPlus, Token::Term, Token::Add, Token::ExprP]),
+	((Token::TPlus, Token::TermP), vec![]),
+	((Token::TTimes, Token::TermP), vec![Token::TTimes, Token::Fact, Token::Times, Token::TermP])
     ]);
 
     let mut value_stack: Vec<f64> = Vec::new();
@@ -148,7 +148,7 @@ fn main() ->ExitCode {
             for v in &stack {
 	        print!(" {:#?}", v);
 	    }
-	    println!("");
+	    println!();
         }
 	match stack.pop() {
 	    Some(current_state) => {
@@ -185,13 +185,13 @@ fn main() ->ExitCode {
 			let a = value_stack.pop().unwrap();
 			println!("result = {}", a);
 		    }
-		    Token::OP | Token::CP | Token::NUMBER | Token::PLUS | Token::MINUS |
-		    Token::TIMES | Token::DIVIDE | Token::NL | Token::END => {
+		    Token::TOp | Token::TCp | Token::TNumber | Token::TPlus | Token::TMinus |
+		    Token::TTimes | Token::TDivide | Token::TNl | Token::TEnd => {
 			if current_state != token.0 {
 			    println!("syntax error");
 			    return ExitCode::from(1);
 			}
-			if current_state == Token::NUMBER {
+			if current_state == Token::TNumber {
 			    val = token.1
 			}
 			token = lex(&mut c);
