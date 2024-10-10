@@ -41,6 +41,7 @@ enum Token {
     Add, Subtract, Times, Divide,
     Push, Print,
 }
+use Token::*;
 
 fn getc() -> char {
     let mut c: [u8; 1] = [0];
@@ -61,10 +62,10 @@ fn lex(c: &mut char) -> (Token, f64) {
                 continue;
             }
             '\0' => {
-                token = Token::TEnd;
+                token = TEnd;
             }
             '\n' => {
-                token = Token::TNl;
+                token = TNl;
             }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => loop {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
@@ -72,27 +73,27 @@ fn lex(c: &mut char) -> (Token, f64) {
                 match *c {
                     '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
                     _ => {
-                        return (Token::TNumber, val);
+                        return (TNumber, val);
                     }
                 }
             },
             '+' => {
-                token = Token::TPlus;
+                token = TPlus;
             }
             '-' => {
-                token = Token::TMinus;
+                token = TMinus;
             }
             '*' => {
-                token = Token::TTimes;
+                token = TTimes;
             }
             '/' => {
-                token = Token::TDivide;
+                token = TDivide;
             }
             '(' => {
-                token = Token::TOp;
+                token = TOp;
             }
             ')' => {
-                token = Token::TCp;
+                token = TCp;
             }
             _ => {
                 println!("Invalid char {}", *c);
@@ -107,87 +108,87 @@ fn lex(c: &mut char) -> (Token, f64) {
 
 fn main() -> ExitCode {
     let table: HashMap<(Token, Token), Vec<Token>> = HashMap::from([
-        ((Token::TCp, Token::ExprP), vec![]),
-        ((Token::TCp, Token::TermP), vec![]),
+        ((TCp, ExprP), vec![]),
+        ((TCp, TermP), vec![]),
         (
-            (Token::TDivide, Token::TermP),
-            vec![Token::TDivide, Token::Fact, Token::Divide, Token::TermP],
+            (TDivide, TermP),
+            vec![TDivide, Fact, Divide, TermP],
         ),
-        ((Token::TEnd, Token::Start), vec![]),
+        ((TEnd, Start), vec![]),
         (
-            (Token::TMinus, Token::Expr),
-            vec![Token::Term, Token::ExprP],
-        ),
-        (
-            (Token::TMinus, Token::ExprP),
-            vec![Token::TMinus, Token::Term, Token::Subtract, Token::ExprP],
+            (TMinus, Expr),
+            vec![Term, ExprP],
         ),
         (
-            (Token::TMinus, Token::Fact),
-            vec![Token::TMinus, Token::Fact, Token::Negate],
+            (TMinus, ExprP),
+            vec![TMinus, Term, Subtract, ExprP],
         ),
         (
-            (Token::TMinus, Token::Line),
-            vec![Token::Expr, Token::Print, Token::TNl],
+            (TMinus, Fact),
+            vec![TMinus, Fact, Negate],
         ),
         (
-            (Token::TMinus, Token::Start),
-            vec![Token::Line, Token::Start],
+            (TMinus, Line),
+            vec![Expr, Print, TNl],
         ),
         (
-            (Token::TMinus, Token::Term),
-            vec![Token::Fact, Token::TermP],
-        ),
-        ((Token::TMinus, Token::TermP), vec![]),
-        ((Token::TNl, Token::ExprP), vec![]),
-        ((Token::TNl, Token::Line), vec![Token::TNl]),
-        ((Token::TNl, Token::Start), vec![Token::Line, Token::Start]),
-        ((Token::TNl, Token::TermP), vec![]),
-        (
-            (Token::TNumber, Token::Expr),
-            vec![Token::Term, Token::ExprP],
+            (TMinus, Start),
+            vec![Line, Start],
         ),
         (
-            (Token::TNumber, Token::Fact),
-            vec![Token::TNumber, Token::Push],
+            (TMinus, Term),
+            vec![Fact, TermP],
+        ),
+        ((TMinus, TermP), vec![]),
+        ((TNl, ExprP), vec![]),
+        ((TNl, Line), vec![TNl]),
+        ((TNl, Start), vec![Line, Start]),
+        ((TNl, TermP), vec![]),
+        (
+            (TNumber, Expr),
+            vec![Term, ExprP],
         ),
         (
-            (Token::TNumber, Token::Line),
-            vec![Token::Expr, Token::Print, Token::TNl],
+            (TNumber, Fact),
+            vec![TNumber, Push],
         ),
         (
-            (Token::TNumber, Token::Start),
-            vec![Token::Line, Token::Start],
+            (TNumber, Line),
+            vec![Expr, Print, TNl],
         ),
         (
-            (Token::TNumber, Token::Term),
-            vec![Token::Fact, Token::TermP],
-        ),
-        ((Token::TOp, Token::Expr), vec![Token::Term, Token::ExprP]),
-        (
-            (Token::TOp, Token::Fact),
-            vec![Token::TOp, Token::Expr, Token::TCp],
+            (TNumber, Start),
+            vec![Line, Start],
         ),
         (
-            (Token::TOp, Token::Line),
-            vec![Token::Expr, Token::Print, Token::TNl],
+            (TNumber, Term),
+            vec![Fact, TermP],
         ),
-        ((Token::TOp, Token::Start), vec![Token::Line, Token::Start]),
-        ((Token::TOp, Token::Term), vec![Token::Fact, Token::TermP]),
+        ((TOp, Expr), vec![Term, ExprP]),
         (
-            (Token::TPlus, Token::ExprP),
-            vec![Token::TPlus, Token::Term, Token::Add, Token::ExprP],
+            (TOp, Fact),
+            vec![TOp, Expr, TCp],
         ),
-        ((Token::TPlus, Token::TermP), vec![]),
         (
-            (Token::TTimes, Token::TermP),
-            vec![Token::TTimes, Token::Fact, Token::Times, Token::TermP],
+            (TOp, Line),
+            vec![Expr, Print, TNl],
+        ),
+        ((TOp, Start), vec![Line, Start]),
+        ((TOp, Term), vec![Fact, TermP]),
+        (
+            (TPlus, ExprP),
+            vec![TPlus, Term, Add, ExprP],
+        ),
+        ((TPlus, TermP), vec![]),
+        (
+            (TTimes, TermP),
+            vec![TTimes, Fact, Times, TermP],
         ),
     ]);
 
     let mut value_stack: Vec<f64> = Vec::new();
     let mut stack: Vec<Token> = Vec::new();
-    stack.push(Token::Start);
+    stack.push(Start);
     let mut c: char = '\0';
     let mut token = lex(&mut c);
     let mut val = 0.0;
@@ -201,51 +202,51 @@ fn main() -> ExitCode {
         }
         match stack.pop() {
             Some(current_state) => match current_state {
-                Token::Negate => {
+                Negate => {
                     let a = value_stack.pop().unwrap();
                     value_stack.push(-a);
                 }
-                Token::Add => {
+                Add => {
                     let b = value_stack.pop().unwrap();
                     let a = value_stack.pop().unwrap();
                     value_stack.push(a + b);
                 }
-                Token::Subtract => {
+                Subtract => {
                     let b = value_stack.pop().unwrap();
                     let a = value_stack.pop().unwrap();
                     value_stack.push(a - b);
                 }
-                Token::Times => {
+                Times => {
                     let b = value_stack.pop().unwrap();
                     let a = value_stack.pop().unwrap();
                     value_stack.push(a * b);
                 }
-                Token::Divide => {
+                Divide => {
                     let b = value_stack.pop().unwrap();
                     let a = value_stack.pop().unwrap();
                     value_stack.push(a / b);
                 }
-                Token::Push => {
+                Push => {
                     value_stack.push(val);
                 }
-                Token::Print => {
+                Print => {
                     let a = value_stack.pop().unwrap();
                     println!("result = {}", a);
                 }
-                Token::TOp
-                | Token::TCp
-                | Token::TNumber
-                | Token::TPlus
-                | Token::TMinus
-                | Token::TTimes
-                | Token::TDivide
-                | Token::TNl
-                | Token::TEnd => {
+                TOp
+                | TCp
+                | TNumber
+                | TPlus
+                | TMinus
+                | TTimes
+                | TDivide
+                | TNl
+                | TEnd => {
                     if current_state != token.0 {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    if current_state == Token::TNumber {
+                    if current_state == TNumber {
                         val = token.1
                     }
                     token = lex(&mut c);
