@@ -19,6 +19,8 @@
 use std::collections::HashMap;
 use std::io::Read;
 use std::process::ExitCode;
+use std::hash::{Hash, Hasher};
+use std::mem;
 
 const TRACE: bool = true;
 
@@ -26,11 +28,11 @@ trait MakeToken {
     fn make_token(self) -> Token;
 }
 
-#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum ETerminal {
     OP,
     CP,
-    NUMBER,
+    NUMBER(f64),
     PLUS,
     MINUS,
     TIMES,
@@ -39,6 +41,20 @@ enum ETerminal {
     END,
 }
 use ETerminal::*;
+
+impl Hash for ETerminal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        mem::discriminant(self).hash(state);
+    }
+}
+
+impl PartialEq for ETerminal {
+    fn eq(&self, other: &Self) -> bool {
+        mem::discriminant(self) == mem::discriminant(other)
+    }
+}
+
+impl Eq for ETerminal { }
 
 impl MakeToken for ETerminal {
     fn make_token(self) -> Token {
@@ -110,7 +126,7 @@ fn getc() -> char {
     return c[0] as char;
 }
 
-fn lex(c: &mut char) -> (ETerminal, f64) {
+fn lex(c: &mut char) -> ETerminal {
     let mut val: f64 = 0.0;
     if *c == '\0' {
         *c = getc();
@@ -129,7 +145,7 @@ fn lex(c: &mut char) -> (ETerminal, f64) {
                 match *c {
                     '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
                     _ => {
-                        return (NUMBER, val);
+                        return NUMBER(val);
                     }
                 }
             },
@@ -146,7 +162,7 @@ fn lex(c: &mut char) -> (ETerminal, f64) {
             }
         };
         *c = '\0';
-        return (terminal, val);
+        return terminal;
     }
 }
 
@@ -167,11 +183,11 @@ fn main() -> ExitCode {
         ((NL, Line), token_vec![NL]),
         ((NL, Start), token_vec![Line, Start]),
         ((NL, TermP), token_vec![]),
-        ((NUMBER, Expr), token_vec![Term, ExprP]),
-        ((NUMBER, Fact), token_vec![NUMBER, Push]),
-        ((NUMBER, Line), token_vec![Expr, Print, NL]),
-        ((NUMBER, Start), token_vec![Line, Start]),
-        ((NUMBER, Term), token_vec![Fact, TermP]),
+        ((NUMBER(0.0), Expr), token_vec![Term, ExprP]),
+        ((NUMBER(0.0), Fact), token_vec![NUMBER(0.0), Push]),
+        ((NUMBER(0.0), Line), token_vec![Expr, Print, NL]),
+        ((NUMBER(0.0), Start), token_vec![Line, Start]),
+        ((NUMBER(0.0), Term), token_vec![Fact, TermP]),
         ((OP, Expr), token_vec![Term, ExprP]),
         ((OP, Fact), token_vec![OP, Expr, CP]),
         ((OP, Line), token_vec![Expr, Print, NL]),
@@ -190,7 +206,7 @@ fn main() -> ExitCode {
     let mut val = 0.0;
     loop {
         if TRACE {
-            print!("lexeme {:?}, {} stack", lexeme.0, lexeme.1);
+            print!("lexeme {:?} stack", lexeme);
             for v in &stack {
                 print!(" {:?}", v);
             }
@@ -232,23 +248,27 @@ fn main() -> ExitCode {
                     }
                 },
                 Terminal(terminal) => {
-                    if terminal != lexeme.0 {
+                    if TRACE {
+                        println!("Terminal {:?} == {:?}", lexeme, terminal);
+                    }
+                    if terminal != lexeme {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    if terminal == NUMBER {
-                        val = lexeme.1
-                    }
+                    match lexeme { NUMBER(x) => val = x, _ => {} }
                     lexeme = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => {
-                    if !table.contains_key(&(lexeme.0, non_terminal)) {
+                    if TRACE {
+                        println!("NonTerminal {:?}", non_terminal);
+                    }
+                    if !table.contains_key(&(lexeme, non_terminal)) {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    let _new_bits = &table[&(lexeme.0, non_terminal)];
+                    let _new_bits = &table[&(lexeme, non_terminal)];
                     if TRACE {
-                        print!("push");
+                        print!("push (");
                     }
                     for v in _new_bits.iter().rev() {
                         if TRACE {
@@ -257,7 +277,7 @@ fn main() -> ExitCode {
                         stack.push(*v)
                     }
                     if TRACE {
-                        println!();
+                        println!(")");
                     }
                 }
             },
