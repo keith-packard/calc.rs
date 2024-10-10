@@ -64,37 +64,22 @@ fn lex(c: &mut char) -> (Token, Option<f64>) {
                 *c = getc();
                 continue;
             }
-            '\0' => {
-                TEnd
-            }
-            '\n' => {
-                TNl
-            }
-            '0' ..= '9' => loop {
+            '\0' => TEnd,
+            '\n' => TNl,
+            '0'..='9' => loop {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
                 *c = getc();
+                #[allow(clippy::manual_is_ascii_check)]
                 if !matches!(*c, '0'..='9') {
                     return (TNumber, Some(val));
                 }
-            }
-            '+' => {
-                TPlus
-            }
-            '-' => {
-                TMinus
-            }
-            '*' => {
-                TTimes
-            }
-            '/' => {
-                TDivide
-            }
-            '(' => {
-                TOp
-            }
-            ')' => {
-                TCp
-            }
+            },
+            '+' => TPlus,
+            '-' => TMinus,
+            '*' => TTimes,
+            '/' => TDivide,
+            '(' => TOp,
+            ')' => TCp,
             _ => {
                 println!("Invalid char {}", *c);
                 *c = getc();
@@ -110,80 +95,32 @@ fn main() -> ExitCode {
     let table: HashMap<(Token, Token), Vec<Token>> = HashMap::from([
         ((TCp, ExprP), vec![]),
         ((TCp, TermP), vec![]),
-        (
-            (TDivide, TermP),
-            vec![TDivide, Fact, Divide, TermP],
-        ),
+        ((TDivide, TermP), vec![TDivide, Fact, Divide, TermP]),
         ((TEnd, Start), vec![]),
-        (
-            (TMinus, Expr),
-            vec![Term, ExprP],
-        ),
-        (
-            (TMinus, ExprP),
-            vec![TMinus, Term, Subtract, ExprP],
-        ),
-        (
-            (TMinus, Fact),
-            vec![TMinus, Fact, Negate],
-        ),
-        (
-            (TMinus, Line),
-            vec![Expr, Print, TNl],
-        ),
-        (
-            (TMinus, Start),
-            vec![Line, Start],
-        ),
-        (
-            (TMinus, Term),
-            vec![Fact, TermP],
-        ),
+        ((TMinus, Expr), vec![Term, ExprP]),
+        ((TMinus, ExprP), vec![TMinus, Term, Subtract, ExprP]),
+        ((TMinus, Fact), vec![TMinus, Fact, Negate]),
+        ((TMinus, Line), vec![Expr, Print, TNl]),
+        ((TMinus, Start), vec![Line, Start]),
+        ((TMinus, Term), vec![Fact, TermP]),
         ((TMinus, TermP), vec![]),
         ((TNl, ExprP), vec![]),
         ((TNl, Line), vec![TNl]),
         ((TNl, Start), vec![Line, Start]),
         ((TNl, TermP), vec![]),
-        (
-            (TNumber, Expr),
-            vec![Term, ExprP],
-        ),
-        (
-            (TNumber, Fact),
-            vec![TNumber, Push],
-        ),
-        (
-            (TNumber, Line),
-            vec![Expr, Print, TNl],
-        ),
-        (
-            (TNumber, Start),
-            vec![Line, Start],
-        ),
-        (
-            (TNumber, Term),
-            vec![Fact, TermP],
-        ),
+        ((TNumber, Expr), vec![Term, ExprP]),
+        ((TNumber, Fact), vec![TNumber, Push]),
+        ((TNumber, Line), vec![Expr, Print, TNl]),
+        ((TNumber, Start), vec![Line, Start]),
+        ((TNumber, Term), vec![Fact, TermP]),
         ((TOp, Expr), vec![Term, ExprP]),
-        (
-            (TOp, Fact),
-            vec![TOp, Expr, TCp],
-        ),
-        (
-            (TOp, Line),
-            vec![Expr, Print, TNl],
-        ),
+        ((TOp, Fact), vec![TOp, Expr, TCp]),
+        ((TOp, Line), vec![Expr, Print, TNl]),
         ((TOp, Start), vec![Line, Start]),
         ((TOp, Term), vec![Fact, TermP]),
-        (
-            (TPlus, ExprP),
-            vec![TPlus, Term, Add, ExprP],
-        ),
+        ((TPlus, ExprP), vec![TPlus, Term, Add, ExprP]),
         ((TPlus, TermP), vec![]),
-        (
-            (TTimes, TermP),
-            vec![TTimes, Fact, Times, TermP],
-        ),
+        ((TTimes, TermP), vec![TTimes, Fact, Times, TermP]),
     ]);
 
     let mut value_stack: Vec<f64> = Vec::new();
