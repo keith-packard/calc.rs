@@ -55,17 +55,16 @@ fn lex(c: &mut char) -> (Token, f64) {
         *c = getc();
     }
     loop {
-        let token;
-        match *c {
+        let token = match *c {
             ' ' | '\t' => {
                 *c = getc();
                 continue;
             }
             '\0' => {
-                token = TEnd;
+                TEnd
             }
             '\n' => {
-                token = TNl;
+                TNl
             }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => loop {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
@@ -78,29 +77,29 @@ fn lex(c: &mut char) -> (Token, f64) {
                 }
             },
             '+' => {
-                token = TPlus;
+                TPlus
             }
             '-' => {
-                token = TMinus;
+                TMinus
             }
             '*' => {
-                token = TTimes;
+                TTimes
             }
             '/' => {
-                token = TDivide;
+                TDivide
             }
             '(' => {
-                token = TOp;
+                TOp
             }
             ')' => {
-                token = TCp;
+                TCp
             }
             _ => {
                 println!("Invalid char {}", *c);
                 *c = getc();
                 continue;
             }
-        }
+        };
         *c = '\0';
         return (token, val);
     }
