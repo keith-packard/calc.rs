@@ -20,12 +20,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::process::ExitCode;
 
-#[derive(PartialEq)]
-#[derive(Hash)]
-#[derive(Eq)]
-#[derive(Clone)]
-#[derive(Copy)]
-#[derive(Debug)]
+#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 enum Token {
     /* Terminals */
     OP, CP,
