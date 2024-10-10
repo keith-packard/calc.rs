@@ -66,20 +66,19 @@ fn lex(c: &mut char) -> (Token, Option<f64>) {
             }
             '\0' => TEnd,
             '\n' => TNl,
-            '0'..='9' => loop {
-                val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
-                *c = getc();
-                #[allow(clippy::manual_is_ascii_check)]
-                if !matches!(*c, '0'..='9') {
-                    return (TNumber, Some(val));
-                }
-            },
             '+' => TPlus,
             '-' => TMinus,
             '*' => TTimes,
             '/' => TDivide,
             '(' => TOp,
             ')' => TCp,
+            c0 if c0.is_ascii_digit() => loop {
+                val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
+                *c = getc();
+                if !c.is_ascii_digit() {
+                    return (TNumber, Some(val));
+                }
+            },
             _ => {
                 println!("Invalid char {}", *c);
                 *c = getc();
