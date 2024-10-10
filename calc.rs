@@ -166,6 +166,27 @@ fn lex(c: &mut char) -> ETerminal {
     }
 }
 
+struct Values(Vec<f64>);
+
+impl Values {
+    fn pop(&mut self) -> f64 {
+        match self.0.pop() {
+            Some(v) => v,
+            None => {
+                panic!("Internal error");
+            }
+        }
+    }
+
+    fn push(&mut self, value: f64) {
+        self.0.push(value);
+    }
+
+    fn new() -> Self {
+        Values(Vec::new())
+    }
+}
+
 fn main() -> ExitCode {
     let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
         ((CP, ExprP), token_vec![]),
@@ -198,7 +219,7 @@ fn main() -> ExitCode {
         ((TIMES, TermP), token_vec![TIMES, Fact, Times, TermP]),
     ]);
 
-    let mut value_stack: Vec<f64> = Vec::new();
+    let mut values = Values::new();
     let mut stack: Vec<Token> = Vec::new();
     stack.push(Start.make_token());
     let mut c: char = '\0';
@@ -207,46 +228,56 @@ fn main() -> ExitCode {
     loop {
         if TRACE {
             print!("    {:?}:", lexeme);
-            for v in &stack {
-                print!(" {:?}", v);
+            for token in &stack {
+                print!(" {:?}", token);
             }
             println!("");
         }
         match stack.pop() {
             Some(token) => match token {
-                Action(action) => match action {
-                    Negate => {
-                        let a = value_stack.pop().unwrap();
-                        value_stack.push(-a);
+                Action(action) => {
+                    match action {
+                        Negate => {
+                            let a = values.pop();
+                            values.push(-a);
+                        }
+                        Add => {
+                            let b = values.pop();
+                            let a = values.pop();
+                            values.push(a + b);
+                        }
+                        Subtract => {
+                            let b = values.pop();
+                            let a = values.pop();
+                            values.push(a - b);
+                        }
+                        Times => {
+                            let b = values.pop();
+                            let a = values.pop();
+                            values.push(a * b);
+                        }
+                        Divide => {
+                            let b = values.pop();
+                            let a = values.pop();
+                            values.push(a / b);
+                        }
+                        Push => {
+                            values.push(val);
+                        }
+                        Print => {
+                            let a = values.pop();
+                            println!("result = {}", a);
+                            break;
+                        }
                     }
-                    Add => {
-                        let b = value_stack.pop().unwrap();
-                        let a = value_stack.pop().unwrap();
-                        value_stack.push(a + b);
+                    if TRACE {
+                        print!("        ");
+                        for value in &values.0 {
+                            print!(" {}", value);
+                        }
+                        println!();
                     }
-                    Subtract => {
-                        let b = value_stack.pop().unwrap();
-                        let a = value_stack.pop().unwrap();
-                        value_stack.push(a - b);
-                    }
-                    Times => {
-                        let b = value_stack.pop().unwrap();
-                        let a = value_stack.pop().unwrap();
-                        value_stack.push(a * b);
-                    }
-                    Divide => {
-                        let b = value_stack.pop().unwrap();
-                        let a = value_stack.pop().unwrap();
-                        value_stack.push(a / b);
-                    }
-                    Push => {
-                        value_stack.push(val);
-                    }
-                    Print => {
-                        let a = value_stack.pop().unwrap();
-                        println!("result = {}", a);
-                    }
-                },
+                }
                 Terminal(terminal) => {
                     if terminal != lexeme {
                         println!("syntax error");
@@ -258,16 +289,17 @@ fn main() -> ExitCode {
                     }
                     lexeme = lex(&mut c);
                 }
-                NonTerminal(non_terminal) => {
-                    if !table.contains_key(&(lexeme, non_terminal)) {
+                NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
+                    Some(tokens) => {
+                        for token in tokens.iter().rev() {
+                            stack.push(*token)
+                        }
+                    }
+                    None => {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    let _new_bits = &table[&(lexeme, non_terminal)];
-                    for v in _new_bits.iter().rev() {
-                        stack.push(*v)
-                    }
-                }
+                },
             },
             None => {
                 break;
