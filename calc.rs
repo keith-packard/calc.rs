@@ -126,12 +126,14 @@ macro_rules! token_vec {
     };
 }
 
+/// Read a single caracter, returning '\0' on EOF
 fn getc() -> char {
     let mut c: [u8; 1] = [0];
     let _ = std::io::stdin().read(&mut c);
     c[0] as char
 }
 
+/// Read one token
 fn lex(c: &mut char) -> ETerminal {
     let mut val: f64 = 0.0;
     if *c == '\0' {
@@ -169,6 +171,7 @@ fn lex(c: &mut char) -> ETerminal {
     }
 }
 
+/// Wrap Vec<f64> to catch underflow
 struct Values(Vec<f64>);
 
 impl Values {
@@ -190,7 +193,16 @@ impl Values {
     }
 }
 
+impl IntoIterator for Values {
+    type Item = f64;
+    type IntoIter = std::vec::IntoIter<f64>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 fn main() -> ExitCode {
+    // Parse table
     let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
         ((CP, ExprP), token_vec![]),
         ((CP, TermP), token_vec![]),
@@ -222,12 +234,22 @@ fn main() -> ExitCode {
         ((TIMES, TermP), token_vec![TIMES, Fact, Times, TermP]),
     ]);
 
+    // Value stack
     let mut values = Values::new();
+
+    // Parse stack
     let mut stack: Vec<Token> = Vec::new();
     stack.push(Start.make_token());
+
+    // Lex state to avoid needing ungetc
     let mut c: char = '\0';
+
+    // Read the first token
     let mut lexeme = lex(&mut c);
+
+    // Previous token
     let mut prev_lexeme = END;
+
     loop {
         if TRACE {
             print!("    {:?}:", lexeme);
@@ -239,15 +261,19 @@ fn main() -> ExitCode {
         match stack.pop() {
             Some(token) => match token {
                 Terminal(terminal) => {
+                    // Verify token match
                     if terminal != lexeme {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
+                    // Save previous token for use in Actions
                     prev_lexeme = lexeme;
+                    // Read the next token
                     lexeme = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
                     Some(tokens) => {
+                        // Matched non-terminal, replace with production RHS
                         for token in tokens.iter().rev() {
                             stack.push(*token)
                         }
@@ -294,7 +320,7 @@ fn main() -> ExitCode {
                     }
                     if TRACE {
                         print!("        ");
-                        for value in &values.0 {
+                        for value in &values {
                             print!(" {}", value);
                         }
                         println!();
