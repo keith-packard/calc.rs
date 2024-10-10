@@ -20,6 +20,8 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::process::ExitCode;
 
+const TRACE: bool = false;
+
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
 enum Token {
     /* Terminals */
@@ -141,12 +143,13 @@ fn main() ->ExitCode {
     let mut token = lex(&mut c);
     let mut val = 0.0;
     loop {
-
-	//print!("token {:#?}, {} stack", token.0, token.1);
-//	for v in &stack {
-//	    print!(" {:#?}", v);
-//	}
-//	println!("");
+        if TRACE {
+	    print!("token {:#?}, {} stack", token.0, token.1);
+            for v in &stack {
+	        print!(" {:#?}", v);
+	    }
+	    println!("");
+        }
 	match stack.pop() {
 	    Some(current_state) => {
 
@@ -199,12 +202,18 @@ fn main() ->ExitCode {
 			    return ExitCode::from(1);
 			}
 			let _new_bits = &table[&(token.0, current_state)];
-//			print!("push");
+                        if TRACE {
+                            print!("push");
+                        }
 			for v in _new_bits.iter().rev() {
-//			    print!(" {:#?}", *v);
+                            if TRACE {
+			        print!(" {:#?}", *v);
+                            }
 			    stack.push(*v)
 			}
-//			println!("");
+                        if TRACE {
+			    println!();
+                        }
 		    }
 		}
 	    }
