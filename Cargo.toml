@@ -3,9 +3,6 @@ edition = "2021"
 name = "calc"
 version = "0.0.0"
 
-[dependencies]
-rand = "0.8.5"
-
 [[bin]]
 name = "calc"
 path = "calc.rs"
