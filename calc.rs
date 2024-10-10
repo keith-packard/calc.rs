@@ -123,7 +123,7 @@ macro_rules! token_vec {
 fn getc() -> char {
     let mut c: [u8; 1] = [0];
     let _ = std::io::stdin().read(&mut c);
-    return c[0] as char;
+    c[0] as char
 }
 
 fn lex(c: &mut char) -> ETerminal {
@@ -231,7 +231,7 @@ fn main() -> ExitCode {
             for token in &stack {
                 print!(" {:?}", token);
             }
-            println!("");
+            println!();
         }
         match stack.pop() {
             Some(token) => match token {
