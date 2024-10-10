@@ -224,7 +224,7 @@ fn main() -> ExitCode {
     stack.push(Start.make_token());
     let mut c: char = '\0';
     let mut lexeme = lex(&mut c);
-    let mut val = 0.0;
+    let mut prev_lexeme = END;
     loop {
         if TRACE {
             print!("    {:?}:", lexeme);
@@ -262,12 +262,14 @@ fn main() -> ExitCode {
                             values.push(a / b);
                         }
                         Push => {
-                            values.push(val);
+                            match prev_lexeme {
+                                NUMBER(x) => values.push(x),
+                                _ => panic!("Invalid state")
+                            }
                         }
                         Print => {
                             let a = values.pop();
                             println!("result = {}", a);
-                            break;
                         }
                     }
                     if TRACE {
@@ -283,10 +285,7 @@ fn main() -> ExitCode {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    match lexeme {
-                        NUMBER(x) => val = x,
-                        _ => {}
-                    }
+                    prev_lexeme = lexeme;
                     lexeme = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
