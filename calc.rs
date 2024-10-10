@@ -23,6 +23,7 @@ use std::process::ExitCode;
 const TRACE: bool = false;
 
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
+#[rustfmt::skip]
 enum Token {
     /* Terminals */
     TOp, TCp,
@@ -50,90 +51,138 @@ fn getc() -> char {
 fn lex(c: &mut char) -> (Token, f64) {
     let mut val: f64 = 0.0;
     if *c == '\0' {
-	*c = getc();
+        *c = getc();
     }
     loop {
-	let token;
-	match *c {
-	    ' ' | '\t' => {
-		*c = getc();
-		continue;
-	    },
-	    '\0' => {
-		token = Token::TEnd;
-	    }
-	    '\n' => {
-		token = Token::TNl;
-	    },
-	    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-		loop {
-		    val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
-		    *c = getc();
-		    match *c {
-			'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
-			_ => { return (Token::TNumber, val); }
-		    }
-		} 
-	    }
-	    '+' => {
-		token = Token::TPlus;
-	    }
-	    '-' => {
-		token = Token::TMinus;
-	    }
-	    '*' => {
-		token = Token::TTimes;
-	    }
-	    '/' => {
-		token = Token::TDivide;
-	    }
-	    '(' => {
-		token = Token::TOp;
-	    }
-	    ')' => {
-		token = Token::TCp;
-	    }
-	    _ => {
-		println!("Invalid char {}", *c);
-		*c = getc();
-		continue;
-	    }
-	}
-	*c = '\0';
-	return (token, val)
+        let token;
+        match *c {
+            ' ' | '\t' => {
+                *c = getc();
+                continue;
+            }
+            '\0' => {
+                token = Token::TEnd;
+            }
+            '\n' => {
+                token = Token::TNl;
+            }
+            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => loop {
+                val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
+                *c = getc();
+                match *c {
+                    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
+                    _ => {
+                        return (Token::TNumber, val);
+                    }
+                }
+            },
+            '+' => {
+                token = Token::TPlus;
+            }
+            '-' => {
+                token = Token::TMinus;
+            }
+            '*' => {
+                token = Token::TTimes;
+            }
+            '/' => {
+                token = Token::TDivide;
+            }
+            '(' => {
+                token = Token::TOp;
+            }
+            ')' => {
+                token = Token::TCp;
+            }
+            _ => {
+                println!("Invalid char {}", *c);
+                *c = getc();
+                continue;
+            }
+        }
+        *c = '\0';
+        return (token, val);
     }
 }
 
-fn main() ->ExitCode {
-    let table: HashMap<(Token,Token), Vec<Token>> = HashMap::from([
-	((Token::TCp, Token::ExprP), vec![]),
-	((Token::TCp, Token::TermP), vec![]),
-	((Token::TDivide, Token::TermP), vec![Token::TDivide, Token::Fact, Token::Divide, Token::TermP]),
-	((Token::TEnd, Token::Start), vec![]),
-	((Token::TMinus, Token::Expr), vec![Token::Term, Token::ExprP]),
-	((Token::TMinus, Token::ExprP), vec![Token::TMinus, Token::Term, Token::Subtract, Token::ExprP]),
-	((Token::TMinus, Token::Fact), vec![Token::TMinus, Token::Fact, Token::Negate]),
-	((Token::TMinus, Token::Line), vec![Token::Expr, Token::Print, Token::TNl]),
-	((Token::TMinus, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::TMinus, Token::Term), vec![Token::Fact, Token::TermP]),
-	((Token::TMinus, Token::TermP), vec![]),
-	((Token::TNl, Token::ExprP), vec![]),
-	((Token::TNl, Token::Line), vec![Token::TNl,]),
-	((Token::TNl, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::TNl, Token::TermP), vec![]),
-	((Token::TNumber, Token::Expr), vec![Token::Term, Token::ExprP]),
-	((Token::TNumber, Token::Fact), vec![Token::TNumber, Token::Push]),
-	((Token::TNumber, Token::Line), vec![Token::Expr, Token::Print, Token::TNl]),
-	((Token::TNumber, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::TNumber, Token::Term), vec![Token::Fact, Token::TermP]),
-	((Token::TOp, Token::Expr), vec![Token::Term, Token::ExprP]),
-	((Token::TOp, Token::Fact), vec![Token::TOp, Token::Expr, Token::TCp]),
-	((Token::TOp, Token::Line), vec![Token::Expr, Token::Print, Token::TNl]),
-	((Token::TOp, Token::Start), vec![Token::Line, Token::Start]),
-	((Token::TOp, Token::Term), vec![Token::Fact, Token::TermP]),
-	((Token::TPlus, Token::ExprP), vec![Token::TPlus, Token::Term, Token::Add, Token::ExprP]),
-	((Token::TPlus, Token::TermP), vec![]),
-	((Token::TTimes, Token::TermP), vec![Token::TTimes, Token::Fact, Token::Times, Token::TermP])
+fn main() -> ExitCode {
+    let table: HashMap<(Token, Token), Vec<Token>> = HashMap::from([
+        ((Token::TCp, Token::ExprP), vec![]),
+        ((Token::TCp, Token::TermP), vec![]),
+        (
+            (Token::TDivide, Token::TermP),
+            vec![Token::TDivide, Token::Fact, Token::Divide, Token::TermP],
+        ),
+        ((Token::TEnd, Token::Start), vec![]),
+        (
+            (Token::TMinus, Token::Expr),
+            vec![Token::Term, Token::ExprP],
+        ),
+        (
+            (Token::TMinus, Token::ExprP),
+            vec![Token::TMinus, Token::Term, Token::Subtract, Token::ExprP],
+        ),
+        (
+            (Token::TMinus, Token::Fact),
+            vec![Token::TMinus, Token::Fact, Token::Negate],
+        ),
+        (
+            (Token::TMinus, Token::Line),
+            vec![Token::Expr, Token::Print, Token::TNl],
+        ),
+        (
+            (Token::TMinus, Token::Start),
+            vec![Token::Line, Token::Start],
+        ),
+        (
+            (Token::TMinus, Token::Term),
+            vec![Token::Fact, Token::TermP],
+        ),
+        ((Token::TMinus, Token::TermP), vec![]),
+        ((Token::TNl, Token::ExprP), vec![]),
+        ((Token::TNl, Token::Line), vec![Token::TNl]),
+        ((Token::TNl, Token::Start), vec![Token::Line, Token::Start]),
+        ((Token::TNl, Token::TermP), vec![]),
+        (
+            (Token::TNumber, Token::Expr),
+            vec![Token::Term, Token::ExprP],
+        ),
+        (
+            (Token::TNumber, Token::Fact),
+            vec![Token::TNumber, Token::Push],
+        ),
+        (
+            (Token::TNumber, Token::Line),
+            vec![Token::Expr, Token::Print, Token::TNl],
+        ),
+        (
+            (Token::TNumber, Token::Start),
+            vec![Token::Line, Token::Start],
+        ),
+        (
+            (Token::TNumber, Token::Term),
+            vec![Token::Fact, Token::TermP],
+        ),
+        ((Token::TOp, Token::Expr), vec![Token::Term, Token::ExprP]),
+        (
+            (Token::TOp, Token::Fact),
+            vec![Token::TOp, Token::Expr, Token::TCp],
+        ),
+        (
+            (Token::TOp, Token::Line),
+            vec![Token::Expr, Token::Print, Token::TNl],
+        ),
+        ((Token::TOp, Token::Start), vec![Token::Line, Token::Start]),
+        ((Token::TOp, Token::Term), vec![Token::Fact, Token::TermP]),
+        (
+            (Token::TPlus, Token::ExprP),
+            vec![Token::TPlus, Token::Term, Token::Add, Token::ExprP],
+        ),
+        ((Token::TPlus, Token::TermP), vec![]),
+        (
+            (Token::TTimes, Token::TermP),
+            vec![Token::TTimes, Token::Fact, Token::Times, Token::TermP],
+        ),
     ]);
 
     let mut value_stack: Vec<f64> = Vec::new();
@@ -144,81 +193,87 @@ fn main() ->ExitCode {
     let mut val = 0.0;
     loop {
         if TRACE {
-	    print!("token {:#?}, {} stack", token.0, token.1);
+            print!("token {:#?}, {} stack", token.0, token.1);
             for v in &stack {
-	        print!(" {:#?}", v);
-	    }
-	    println!();
+                print!(" {:#?}", v);
+            }
+            println!();
         }
-	match stack.pop() {
-	    Some(current_state) => {
-
-		match current_state {
-		    Token::Negate => {
-			let a = value_stack.pop().unwrap();
-			value_stack.push(-a);
-		    }
-		    Token::Add => {
-			let b = value_stack.pop().unwrap();
-			let a = value_stack.pop().unwrap();
-			value_stack.push(a + b);
-		    }
-		    Token::Subtract => {
-			let b = value_stack.pop().unwrap();
-			let a = value_stack.pop().unwrap();
-			value_stack.push(a - b);
-		    }
-		    Token::Times => { 
-			let b = value_stack.pop().unwrap();
-			let a = value_stack.pop().unwrap();
-			value_stack.push(a * b);
-		    }
-		    Token::Divide => { 
-			let b = value_stack.pop().unwrap();
-			let a = value_stack.pop().unwrap();
-			value_stack.push(a / b);
-		    }
-		    Token::Push => { 
-			value_stack.push(val);
-		    }
-		    Token::Print => {
-			let a = value_stack.pop().unwrap();
-			println!("result = {}", a);
-		    }
-		    Token::TOp | Token::TCp | Token::TNumber | Token::TPlus | Token::TMinus |
-		    Token::TTimes | Token::TDivide | Token::TNl | Token::TEnd => {
-			if current_state != token.0 {
-			    println!("syntax error");
-			    return ExitCode::from(1);
-			}
-			if current_state == Token::TNumber {
-			    val = token.1
-			}
-			token = lex(&mut c);
-		    }
-		    _ => {
-			if !table.contains_key(&(token.0, current_state)) {
-			    println!("syntax error");
-			    return ExitCode::from(1);
-			}
-			let _new_bits = &table[&(token.0, current_state)];
+        match stack.pop() {
+            Some(current_state) => match current_state {
+                Token::Negate => {
+                    let a = value_stack.pop().unwrap();
+                    value_stack.push(-a);
+                }
+                Token::Add => {
+                    let b = value_stack.pop().unwrap();
+                    let a = value_stack.pop().unwrap();
+                    value_stack.push(a + b);
+                }
+                Token::Subtract => {
+                    let b = value_stack.pop().unwrap();
+                    let a = value_stack.pop().unwrap();
+                    value_stack.push(a - b);
+                }
+                Token::Times => {
+                    let b = value_stack.pop().unwrap();
+                    let a = value_stack.pop().unwrap();
+                    value_stack.push(a * b);
+                }
+                Token::Divide => {
+                    let b = value_stack.pop().unwrap();
+                    let a = value_stack.pop().unwrap();
+                    value_stack.push(a / b);
+                }
+                Token::Push => {
+                    value_stack.push(val);
+                }
+                Token::Print => {
+                    let a = value_stack.pop().unwrap();
+                    println!("result = {}", a);
+                }
+                Token::TOp
+                | Token::TCp
+                | Token::TNumber
+                | Token::TPlus
+                | Token::TMinus
+                | Token::TTimes
+                | Token::TDivide
+                | Token::TNl
+                | Token::TEnd => {
+                    if current_state != token.0 {
+                        println!("syntax error");
+                        return ExitCode::from(1);
+                    }
+                    if current_state == Token::TNumber {
+                        val = token.1
+                    }
+                    token = lex(&mut c);
+                }
+                _ => {
+                    if !table.contains_key(&(token.0, current_state)) {
+                        println!("syntax error");
+                        return ExitCode::from(1);
+                    }
+                    let _new_bits = &table[&(token.0, current_state)];
+                    if TRACE {
+                        print!("push");
+                    }
+                    for v in _new_bits.iter().rev() {
                         if TRACE {
-                            print!("push");
+                            print!(" {:#?}", *v);
                         }
-			for v in _new_bits.iter().rev() {
-                            if TRACE {
-			        print!(" {:#?}", *v);
-                            }
-			    stack.push(*v)
-			}
-                        if TRACE {
-			    println!();
-                        }
-		    }
-		}
-	    }
-	    None => { break; }
-	}
+                        stack.push(*v)
+                    }
+                    if TRACE {
+                        println!();
+                    }
+                }
+            },
+            None => {
+                break;
+            }
+        }
     }
     ExitCode::SUCCESS
 }
