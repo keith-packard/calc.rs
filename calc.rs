@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::process::ExitCode;
 
-const TRACE: bool = false;
+const TRACE: bool = true;
 
 trait MakeToken {
     fn make_token(self) -> Token;
@@ -41,7 +41,9 @@ enum ETerminal {
 use ETerminal::*;
 
 impl MakeToken for ETerminal {
-    fn make_token(self) -> Token { Terminal(self) }
+    fn make_token(self) -> Token {
+        Terminal(self)
+    }
 }
 
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
@@ -57,7 +59,9 @@ enum ENonTerminal {
 use ENonTerminal::*;
 
 impl MakeToken for ENonTerminal {
-    fn make_token(self) -> Token { NonTerminal(self) }
+    fn make_token(self) -> Token {
+        NonTerminal(self)
+    }
 }
 
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
@@ -73,7 +77,9 @@ enum EAction {
 use EAction::*;
 
 impl MakeToken for EAction {
-    fn make_token(self) -> Token { Action(self) }
+    fn make_token(self) -> Token {
+        Action(self)
+    }
 }
 
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
@@ -148,148 +154,105 @@ fn main() -> ExitCode {
     let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
         ((CP, ExprP), token_vec![]),
         ((CP, TermP), token_vec![]),
-        (
-            (DIVIDE, TermP),
-            token_vec![DIVIDE, Fact, Divide, TermP],
-        ),
+        ((DIVIDE, TermP), token_vec![DIVIDE, Fact, Divide, TermP]),
         ((END, Start), token_vec![]),
         ((MINUS, Expr), token_vec![Term, ExprP]),
-        (
-            (MINUS, ExprP),
-            token_vec![MINUS, Term, Subtract, ExprP],
-        ),
-        (
-            (MINUS, Fact),
-            token_vec![MINUS, Fact, Negate],
-        ),
-        (
-            (MINUS, Line),
-            token_vec![Expr, Print, NL],
-        ),
-        (
-            (MINUS, Start),
-            token_vec![Line, Start],
-        ),
+        ((MINUS, ExprP), token_vec![MINUS, Term, Subtract, ExprP]),
+        ((MINUS, Fact), token_vec![MINUS, Fact, Negate]),
+        ((MINUS, Line), token_vec![Expr, Print, NL]),
+        ((MINUS, Start), token_vec![Line, Start]),
         ((MINUS, Term), token_vec![Fact, TermP]),
         ((MINUS, TermP), token_vec![]),
         ((NL, ExprP), token_vec![]),
         ((NL, Line), token_vec![NL]),
         ((NL, Start), token_vec![Line, Start]),
         ((NL, TermP), token_vec![]),
-        (
-            (NUMBER, Expr),
-            token_vec![Term, ExprP],
-        ),
-        (
-            (NUMBER, Fact),
-            token_vec![NUMBER, Push],
-        ),
-        (
-            (NUMBER, Line),
-            token_vec![Expr, Print, NL],
-        ),
-        (
-            (NUMBER, Start),
-            token_vec![Line, Start],
-        ),
-        (
-            (NUMBER, Term),
-            token_vec![Fact, TermP],
-        ),
+        ((NUMBER, Expr), token_vec![Term, ExprP]),
+        ((NUMBER, Fact), token_vec![NUMBER, Push]),
+        ((NUMBER, Line), token_vec![Expr, Print, NL]),
+        ((NUMBER, Start), token_vec![Line, Start]),
+        ((NUMBER, Term), token_vec![Fact, TermP]),
         ((OP, Expr), token_vec![Term, ExprP]),
-        (
-            (OP, Fact),
-            token_vec![OP, Expr, CP],
-        ),
-        (
-            (OP, Line),
-            token_vec![Expr, Print, NL],
-        ),
+        ((OP, Fact), token_vec![OP, Expr, CP]),
+        ((OP, Line), token_vec![Expr, Print, NL]),
         ((OP, Start), token_vec![Line, Start]),
         ((OP, Term), token_vec![Fact, TermP]),
-        (
-            (PLUS, ExprP),
-            token_vec![PLUS, Term, Add, ExprP],
-        ),
+        ((PLUS, ExprP), token_vec![PLUS, Term, Add, ExprP]),
         ((PLUS, TermP), token_vec![]),
-        (
-            (TIMES, TermP),
-            token_vec![TIMES, Fact, Times, TermP],
-        ),
+        ((TIMES, TermP), token_vec![TIMES, Fact, Times, TermP]),
     ]);
 
     let mut value_stack: Vec<f64> = Vec::new();
     let mut stack: Vec<Token> = Vec::new();
     stack.push(Start.make_token());
     let mut c: char = '\0';
-    let mut token = lex(&mut c);
+    let mut lexeme = lex(&mut c);
     let mut val = 0.0;
     loop {
         if TRACE {
-            print!("token {:#?}, {} stack", token.0, token.1);
+            print!("lexeme {:?}, {} stack", lexeme.0, lexeme.1);
             for v in &stack {
-                print!(" {:#?}", v);
+                print!(" {:?}", v);
             }
-            println!("");
+            println!();
         }
         match stack.pop() {
-            Some(current_state) => match current_state {
-                Action(action) =>
-                    match action {
-                        Negate => {
-                            let a = value_stack.pop().unwrap();
-                            value_stack.push(-a);
-                        }
-                        Add => {
-                            let b = value_stack.pop().unwrap();
-                            let a = value_stack.pop().unwrap();
-                            value_stack.push(a + b);
-                        }
-                        Subtract => {
-                            let b = value_stack.pop().unwrap();
-                            let a = value_stack.pop().unwrap();
-                            value_stack.push(a - b);
-                        }
-                        Times => {
-                            let b = value_stack.pop().unwrap();
-                            let a = value_stack.pop().unwrap();
-                            value_stack.push(a * b);
-                        }
-                        Divide => {
-                            let b = value_stack.pop().unwrap();
-                            let a = value_stack.pop().unwrap();
-                            value_stack.push(a / b);
-                        }
-                        Push => {
-                            value_stack.push(val);
-                        }
-                        Print => {
-                            let a = value_stack.pop().unwrap();
-                            println!("result = {}", a);
-                        }
+            Some(token) => match token {
+                Action(action) => match action {
+                    Negate => {
+                        let a = value_stack.pop().unwrap();
+                        value_stack.push(-a);
                     }
+                    Add => {
+                        let b = value_stack.pop().unwrap();
+                        let a = value_stack.pop().unwrap();
+                        value_stack.push(a + b);
+                    }
+                    Subtract => {
+                        let b = value_stack.pop().unwrap();
+                        let a = value_stack.pop().unwrap();
+                        value_stack.push(a - b);
+                    }
+                    Times => {
+                        let b = value_stack.pop().unwrap();
+                        let a = value_stack.pop().unwrap();
+                        value_stack.push(a * b);
+                    }
+                    Divide => {
+                        let b = value_stack.pop().unwrap();
+                        let a = value_stack.pop().unwrap();
+                        value_stack.push(a / b);
+                    }
+                    Push => {
+                        value_stack.push(val);
+                    }
+                    Print => {
+                        let a = value_stack.pop().unwrap();
+                        println!("result = {}", a);
+                    }
+                },
                 Terminal(terminal) => {
-                    if terminal != token.0 {
+                    if terminal != lexeme.0 {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
                     if terminal == NUMBER {
-                        val = token.1
+                        val = lexeme.1
                     }
-                    token = lex(&mut c);
+                    lexeme = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => {
-                    if !table.contains_key(&(token.0, non_terminal)) {
+                    if !table.contains_key(&(lexeme.0, non_terminal)) {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    let _new_bits = &table[&(token.0, non_terminal)];
+                    let _new_bits = &table[&(lexeme.0, non_terminal)];
                     if TRACE {
                         print!("push");
                     }
                     for v in _new_bits.iter().rev() {
                         if TRACE {
-                            print!(" {:#?}", *v);
+                            print!(" {:?}", *v);
                         }
                         stack.push(*v)
                     }
