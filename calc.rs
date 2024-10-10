@@ -22,9 +22,12 @@ use std::process::ExitCode;
 
 const TRACE: bool = false;
 
+trait MakeToken {
+    fn make_token(self) -> Token;
+}
+
 #[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
-enum Token {
-    /* Terminals */
+enum ETerminal {
     OP,
     CP,
     NUMBER,
@@ -34,7 +37,15 @@ enum Token {
     DIVIDE,
     NL,
     END,
-    /* Non-terminals */
+}
+use ETerminal::*;
+
+impl MakeToken for ETerminal {
+    fn make_token(self) -> Token { Terminal(self) }
+}
+
+#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
+enum ENonTerminal {
     Start,
     Expr,
     ExprP,
@@ -42,7 +53,15 @@ enum Token {
     TermP,
     Fact,
     Line,
-    /* Actions */
+}
+use ENonTerminal::*;
+
+impl MakeToken for ENonTerminal {
+    fn make_token(self) -> Token { NonTerminal(self) }
+}
+
+#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
+enum EAction {
     Negate,
     Add,
     Subtract,
@@ -51,6 +70,33 @@ enum Token {
     Push,
     Print,
 }
+use EAction::*;
+
+impl MakeToken for EAction {
+    fn make_token(self) -> Token { Action(self) }
+}
+
+#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug)]
+enum Token {
+    Terminal(ETerminal),
+    NonTerminal(ENonTerminal),
+    Action(EAction),
+}
+
+use Token::*;
+
+macro_rules! token_vec {
+    () => { Vec::new() };
+    ( $( $x:expr ), * ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x.make_token());
+            )*
+            temp_vec
+        }
+    };
+}
 
 fn getc() -> char {
     let mut c: [u8; 1] = [0];
@@ -58,140 +104,123 @@ fn getc() -> char {
     return c[0] as char;
 }
 
-fn lex(c: &mut char) -> (Token, f64) {
+fn lex(c: &mut char) -> (ETerminal, f64) {
     let mut val: f64 = 0.0;
     if *c == '\0' {
         *c = getc();
     }
     loop {
-        let token;
-        match *c {
+        let terminal = match *c {
             ' ' | '\t' => {
                 *c = getc();
                 continue;
             }
-            '\0' => {
-                token = Token::END;
-            }
-            '\n' => {
-                token = Token::NL;
-            }
+            '\0' => END,
+            '\n' => NL,
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => loop {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
                 *c = getc();
                 match *c {
                     '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {}
                     _ => {
-                        return (Token::NUMBER, val);
+                        return (NUMBER, val);
                     }
                 }
             },
-            '+' => {
-                token = Token::PLUS;
-            }
-            '-' => {
-                token = Token::MINUS;
-            }
-            '*' => {
-                token = Token::TIMES;
-            }
-            '/' => {
-                token = Token::DIVIDE;
-            }
-            '(' => {
-                token = Token::OP;
-            }
-            ')' => {
-                token = Token::CP;
-            }
+            '+' => PLUS,
+            '-' => MINUS,
+            '*' => TIMES,
+            '/' => DIVIDE,
+            '(' => OP,
+            ')' => CP,
             _ => {
                 println!("Invalid char {}", *c);
                 *c = getc();
                 continue;
             }
-        }
+        };
         *c = '\0';
-        return (token, val);
+        return (terminal, val);
     }
 }
 
 fn main() -> ExitCode {
-    let table: HashMap<(Token, Token), Vec<Token>> = HashMap::from([
-        ((Token::CP, Token::ExprP), vec![]),
-        ((Token::CP, Token::TermP), vec![]),
+    let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
+        ((CP, ExprP), token_vec![]),
+        ((CP, TermP), token_vec![]),
         (
-            (Token::DIVIDE, Token::TermP),
-            vec![Token::DIVIDE, Token::Fact, Token::Divide, Token::TermP],
+            (DIVIDE, TermP),
+            token_vec![DIVIDE, Fact, Divide, TermP],
         ),
-        ((Token::END, Token::Start), vec![]),
-        ((Token::MINUS, Token::Expr), vec![Token::Term, Token::ExprP]),
+        ((END, Start), token_vec![]),
+        ((MINUS, Expr), token_vec![Term, ExprP]),
         (
-            (Token::MINUS, Token::ExprP),
-            vec![Token::MINUS, Token::Term, Token::Subtract, Token::ExprP],
-        ),
-        (
-            (Token::MINUS, Token::Fact),
-            vec![Token::MINUS, Token::Fact, Token::Negate],
+            (MINUS, ExprP),
+            token_vec![MINUS, Term, Subtract, ExprP],
         ),
         (
-            (Token::MINUS, Token::Line),
-            vec![Token::Expr, Token::Print, Token::NL],
+            (MINUS, Fact),
+            token_vec![MINUS, Fact, Negate],
         ),
         (
-            (Token::MINUS, Token::Start),
-            vec![Token::Line, Token::Start],
-        ),
-        ((Token::MINUS, Token::Term), vec![Token::Fact, Token::TermP]),
-        ((Token::MINUS, Token::TermP), vec![]),
-        ((Token::NL, Token::ExprP), vec![]),
-        ((Token::NL, Token::Line), vec![Token::NL]),
-        ((Token::NL, Token::Start), vec![Token::Line, Token::Start]),
-        ((Token::NL, Token::TermP), vec![]),
-        (
-            (Token::NUMBER, Token::Expr),
-            vec![Token::Term, Token::ExprP],
+            (MINUS, Line),
+            token_vec![Expr, Print, NL],
         ),
         (
-            (Token::NUMBER, Token::Fact),
-            vec![Token::NUMBER, Token::Push],
+            (MINUS, Start),
+            token_vec![Line, Start],
+        ),
+        ((MINUS, Term), token_vec![Fact, TermP]),
+        ((MINUS, TermP), token_vec![]),
+        ((NL, ExprP), token_vec![]),
+        ((NL, Line), token_vec![NL]),
+        ((NL, Start), token_vec![Line, Start]),
+        ((NL, TermP), token_vec![]),
+        (
+            (NUMBER, Expr),
+            token_vec![Term, ExprP],
         ),
         (
-            (Token::NUMBER, Token::Line),
-            vec![Token::Expr, Token::Print, Token::NL],
+            (NUMBER, Fact),
+            token_vec![NUMBER, Push],
         ),
         (
-            (Token::NUMBER, Token::Start),
-            vec![Token::Line, Token::Start],
+            (NUMBER, Line),
+            token_vec![Expr, Print, NL],
         ),
         (
-            (Token::NUMBER, Token::Term),
-            vec![Token::Fact, Token::TermP],
-        ),
-        ((Token::OP, Token::Expr), vec![Token::Term, Token::ExprP]),
-        (
-            (Token::OP, Token::Fact),
-            vec![Token::OP, Token::Expr, Token::CP],
+            (NUMBER, Start),
+            token_vec![Line, Start],
         ),
         (
-            (Token::OP, Token::Line),
-            vec![Token::Expr, Token::Print, Token::NL],
+            (NUMBER, Term),
+            token_vec![Fact, TermP],
         ),
-        ((Token::OP, Token::Start), vec![Token::Line, Token::Start]),
-        ((Token::OP, Token::Term), vec![Token::Fact, Token::TermP]),
+        ((OP, Expr), token_vec![Term, ExprP]),
         (
-            (Token::PLUS, Token::ExprP),
-            vec![Token::PLUS, Token::Term, Token::Add, Token::ExprP],
+            (OP, Fact),
+            token_vec![OP, Expr, CP],
         ),
-        ((Token::PLUS, Token::TermP), vec![]),
         (
-            (Token::TIMES, Token::TermP),
-            vec![Token::TIMES, Token::Fact, Token::Times, Token::TermP],
+            (OP, Line),
+            token_vec![Expr, Print, NL],
+        ),
+        ((OP, Start), token_vec![Line, Start]),
+        ((OP, Term), token_vec![Fact, TermP]),
+        (
+            (PLUS, ExprP),
+            token_vec![PLUS, Term, Add, ExprP],
+        ),
+        ((PLUS, TermP), token_vec![]),
+        (
+            (TIMES, TermP),
+            token_vec![TIMES, Fact, Times, TermP],
         ),
     ]);
 
     let mut value_stack: Vec<f64> = Vec::new();
     let mut stack: Vec<Token> = Vec::new();
-    stack.push(Token::Start);
+    stack.push(Start.make_token());
     let mut c: char = '\0';
     let mut token = lex(&mut c);
     let mut val = 0.0;
@@ -205,61 +234,56 @@ fn main() -> ExitCode {
         }
         match stack.pop() {
             Some(current_state) => match current_state {
-                Token::Negate => {
-                    let a = value_stack.pop().unwrap();
-                    value_stack.push(-a);
-                }
-                Token::Add => {
-                    let b = value_stack.pop().unwrap();
-                    let a = value_stack.pop().unwrap();
-                    value_stack.push(a + b);
-                }
-                Token::Subtract => {
-                    let b = value_stack.pop().unwrap();
-                    let a = value_stack.pop().unwrap();
-                    value_stack.push(a - b);
-                }
-                Token::Times => {
-                    let b = value_stack.pop().unwrap();
-                    let a = value_stack.pop().unwrap();
-                    value_stack.push(a * b);
-                }
-                Token::Divide => {
-                    let b = value_stack.pop().unwrap();
-                    let a = value_stack.pop().unwrap();
-                    value_stack.push(a / b);
-                }
-                Token::Push => {
-                    value_stack.push(val);
-                }
-                Token::Print => {
-                    let a = value_stack.pop().unwrap();
-                    println!("result = {}", a);
-                }
-                Token::OP
-                | Token::CP
-                | Token::NUMBER
-                | Token::PLUS
-                | Token::MINUS
-                | Token::TIMES
-                | Token::DIVIDE
-                | Token::NL
-                | Token::END => {
-                    if current_state != token.0 {
+                Action(action) =>
+                    match action {
+                        Negate => {
+                            let a = value_stack.pop().unwrap();
+                            value_stack.push(-a);
+                        }
+                        Add => {
+                            let b = value_stack.pop().unwrap();
+                            let a = value_stack.pop().unwrap();
+                            value_stack.push(a + b);
+                        }
+                        Subtract => {
+                            let b = value_stack.pop().unwrap();
+                            let a = value_stack.pop().unwrap();
+                            value_stack.push(a - b);
+                        }
+                        Times => {
+                            let b = value_stack.pop().unwrap();
+                            let a = value_stack.pop().unwrap();
+                            value_stack.push(a * b);
+                        }
+                        Divide => {
+                            let b = value_stack.pop().unwrap();
+                            let a = value_stack.pop().unwrap();
+                            value_stack.push(a / b);
+                        }
+                        Push => {
+                            value_stack.push(val);
+                        }
+                        Print => {
+                            let a = value_stack.pop().unwrap();
+                            println!("result = {}", a);
+                        }
+                    }
+                Terminal(terminal) => {
+                    if terminal != token.0 {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    if current_state == Token::NUMBER {
+                    if terminal == NUMBER {
                         val = token.1
                     }
                     token = lex(&mut c);
                 }
-                _ => {
-                    if !table.contains_key(&(token.0, current_state)) {
+                NonTerminal(non_terminal) => {
+                    if !table.contains_key(&(token.0, non_terminal)) {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    let _new_bits = &table[&(token.0, current_state)];
+                    let _new_bits = &table[&(token.0, non_terminal)];
                     if TRACE {
                         print!("push");
                     }
