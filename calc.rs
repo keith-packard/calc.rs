@@ -201,6 +201,14 @@ impl IntoIterator for Values {
     }
 }
 
+impl<'a> IntoIterator for &'a Values {
+    type Item = &'a f64;
+    type IntoIter = std::slice::Iter<'a, f64>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
 fn main() -> ExitCode {
     // Parse table
     let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
@@ -320,7 +328,7 @@ fn main() -> ExitCode {
                     }
                     if TRACE {
                         print!("        ");
-                        for value in &values {
+                        for value in values.iter().rev() {
                             print!(" {}", value);
                         }
                         println!();
