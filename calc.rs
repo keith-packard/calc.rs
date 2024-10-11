@@ -171,48 +171,19 @@ fn lex(c: &mut char) -> ETerminal {
     }
 }
 
-/// Wrap Vec<f64> to catch underflow
-struct Values(Vec<f64>);
+/// Add an 'epop' method to Vec to trap stack underflow
+trait EPop<T> {
+    fn epop(self) -> T;
+}
 
-impl Values {
-    fn pop(&mut self) -> f64 {
-        match self.0.pop() {
+impl<T> EPop<T> for &mut Vec<T> {
+    fn epop(self) -> T {
+        match self.pop() {
             Some(v) => v,
             None => {
                 panic!("Internal error");
             }
         }
-    }
-
-    fn push(&mut self, value: f64) {
-        self.0.push(value);
-    }
-
-    fn new() -> Self {
-        Values(Vec::new())
-    }
-}
-
-impl std::ops::Deref for Values {
-    type Target = Vec<f64>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl IntoIterator for Values {
-    type Item = f64;
-    type IntoIter = std::vec::IntoIter<f64>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl<'a> IntoIterator for &'a Values {
-    type Item = &'a f64;
-    type IntoIter = std::slice::Iter<'a, f64>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
     }
 }
 
@@ -250,7 +221,7 @@ fn main() -> ExitCode {
     ]);
 
     // Value stack
-    let mut values = Values::new();
+    let mut values: Vec<f64> = Vec::new();
 
     // Parse stack
     let mut stack: Vec<Token> = Vec::new();
@@ -301,27 +272,27 @@ fn main() -> ExitCode {
                 Action(action) => {
                     match action {
                         Negate => {
-                            let a = values.pop();
+                            let a = values.epop();
                             values.push(-a);
                         }
                         Add => {
-                            let b = values.pop();
-                            let a = values.pop();
+                            let b = values.epop();
+                            let a = values.epop();
                             values.push(a + b);
                         }
                         Subtract => {
-                            let b = values.pop();
-                            let a = values.pop();
+                            let b = values.epop();
+                            let a = values.epop();
                             values.push(a - b);
                         }
                         Times => {
-                            let b = values.pop();
-                            let a = values.pop();
+                            let b = values.epop();
+                            let a = values.epop();
                             values.push(a * b);
                         }
                         Divide => {
-                            let b = values.pop();
-                            let a = values.pop();
+                            let b = values.epop();
+                            let a = values.epop();
                             values.push(a / b);
                         }
                         Push => match prev_lexeme {
@@ -329,7 +300,7 @@ fn main() -> ExitCode {
                             _ => panic!("Invalid state"),
                         },
                         Print => {
-                            let a = values.pop();
+                            let a = values.epop();
                             println!("result = {}", a);
                         }
                     }
