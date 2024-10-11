@@ -23,7 +23,7 @@ use std::mem;
 use std::process::ExitCode;
 
 /// Turn this on to get tracing.
-const TRACE: bool = true;
+const TRACE: bool = false;
 
 trait MakeToken {
     fn make_token(self) -> Token;
@@ -33,6 +33,7 @@ type Value = f64;
 
 #[derive(Clone, Copy, Debug)]
 enum ETerminal {
+    NONE,
     OP,
     CP,
     NUMBER,
@@ -42,6 +43,7 @@ enum ETerminal {
     DIVIDE,
     NL,
     END,
+    RESET,
 }
 use ETerminal::*;
 
@@ -226,17 +228,13 @@ fn main() -> ExitCode {
     let mut values: Vec<Value> = Vec::new();
 
     // Parse stack
-    let mut stack: Vec<Token> = Vec::new();
-    stack.push(Start.make_token());
+    let mut stack = token_vec![Start];
 
     // Lex state to avoid needing ungetc
     let mut c: char = '\0';
 
-    // Read the first token
-    let (mut lexeme, mut value) = lex(&mut c);
-
-    // Previous token
-    let mut prev_value = 0.0;
+    let mut lexeme = NONE;
+    let mut value = 0.0;
 
     loop {
         if TRACE {
@@ -246,32 +244,49 @@ fn main() -> ExitCode {
             }
             println!();
         }
+
+        if lexeme == RESET {
+            println!("syntax error");
+            while lexeme != NL {
+                (lexeme, value) = lex(&mut c);
+            }
+            stack = token_vec![Start];
+            values = Vec::new();
+            lexeme = NONE
+        }
+
         match stack.pop() {
             Some(token) => match token {
                 Terminal(terminal) => {
+                    if lexeme == NONE {
+                        (lexeme, value) = lex(&mut c);
+                    }
                     // Verify token match
                     if terminal != lexeme {
-                        println!("syntax error");
-                        return ExitCode::from(1);
+                        lexeme = RESET;
+                        continue;
                     }
-                    // Save previous value for use in Actions
-                    prev_value = value;
 
-                    // Read the next token
-                    (lexeme, value) = lex(&mut c);
+                    lexeme = NONE;
                 }
-                NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
-                    Some(tokens) => {
-                        // Matched non-terminal, replace with production RHS
-                        for token in tokens.iter().rev() {
-                            stack.push(*token)
+                NonTerminal(non_terminal) => {
+                    if lexeme == NONE {
+                        (lexeme, value) = lex(&mut c);
+                    }
+                    // Replace with matching production
+                    match table.get(&(lexeme, non_terminal)) {
+                        Some(tokens) => {
+                            // Matched non-terminal, replace with production RHS
+                            for token in tokens.iter().rev() {
+                                stack.push(*token)
+                            }
+                        }
+                        None => {
+                            lexeme = RESET;
+                            continue;
                         }
                     }
-                    None => {
-                        println!("syntax error");
-                        return ExitCode::from(1);
-                    }
-                },
+                }
                 Action(action) => {
                     match action {
                         Negate => {
@@ -299,7 +314,7 @@ fn main() -> ExitCode {
                             values.push(a / b);
                         }
                         Push => {
-                            values.push(prev_value);
+                            values.push(value);
                         }
                         Print => {
                             let a = values.epop();
