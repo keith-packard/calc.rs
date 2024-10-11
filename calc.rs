@@ -190,7 +190,6 @@ impl<T> EPop<T> for &mut Vec<T> {
 }
 
 fn main() -> ExitCode {
-
     // Parse table
     let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
         ((CP, ExprP), token_vec![]),
@@ -301,7 +300,7 @@ fn main() -> ExitCode {
                         }
                         Push => {
                             values.push(prev_value);
-                        },
+                        }
                         Print => {
                             let a = values.epop();
                             println!("result = {}", a);
