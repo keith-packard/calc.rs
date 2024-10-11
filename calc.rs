@@ -29,11 +29,13 @@ trait MakeToken {
     fn make_token(self) -> Token;
 }
 
+type Value = f64;
+
 #[derive(Clone, Copy, Debug)]
 enum ETerminal {
     OP,
     CP,
-    NUMBER(f64),
+    NUMBER,
     PLUS,
     MINUS,
     TIMES,
@@ -46,7 +48,7 @@ use ETerminal::*;
 /// Ignore the number's value for hash and eq
 impl Hash for ETerminal {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        mem::discriminant(self).hash(state);
+        mem::discriminant(self).hash(state)
     }
 }
 
@@ -134,8 +136,8 @@ fn getc() -> char {
 }
 
 /// Read one token
-fn lex(c: &mut char) -> ETerminal {
-    let mut val: f64 = 0.0;
+fn lex(c: &mut char) -> (ETerminal, Value) {
+    let mut val: Value = 0.0;
     if *c == '\0' {
         *c = getc();
     }
@@ -151,7 +153,7 @@ fn lex(c: &mut char) -> ETerminal {
                 val = val * 10.0 + (*c as u32 - '0' as u32) as f64;
                 *c = getc();
                 if !c.is_ascii_digit() {
-                    return NUMBER(val);
+                    return (NUMBER, val);
                 }
             },
             '+' => PLUS,
@@ -167,7 +169,7 @@ fn lex(c: &mut char) -> ETerminal {
             }
         };
         *c = '\0';
-        return terminal;
+        return (terminal, val);
     }
 }
 
@@ -188,6 +190,7 @@ impl<T> EPop<T> for &mut Vec<T> {
 }
 
 fn main() -> ExitCode {
+
     // Parse table
     let table: HashMap<(ETerminal, ENonTerminal), Vec<Token>> = HashMap::from([
         ((CP, ExprP), token_vec![]),
@@ -205,11 +208,11 @@ fn main() -> ExitCode {
         ((NL, Line), token_vec![NL]),
         ((NL, Start), token_vec![Line, Start]),
         ((NL, TermP), token_vec![]),
-        ((NUMBER(0.0), Expr), token_vec![Term, ExprP]),
-        ((NUMBER(0.0), Fact), token_vec![NUMBER(0.0), Push]),
-        ((NUMBER(0.0), Line), token_vec![Expr, Print, NL]),
-        ((NUMBER(0.0), Start), token_vec![Line, Start]),
-        ((NUMBER(0.0), Term), token_vec![Fact, TermP]),
+        ((NUMBER, Expr), token_vec![Term, ExprP]),
+        ((NUMBER, Fact), token_vec![NUMBER, Push]),
+        ((NUMBER, Line), token_vec![Expr, Print, NL]),
+        ((NUMBER, Start), token_vec![Line, Start]),
+        ((NUMBER, Term), token_vec![Fact, TermP]),
         ((OP, Expr), token_vec![Term, ExprP]),
         ((OP, Fact), token_vec![OP, Expr, CP]),
         ((OP, Line), token_vec![Expr, Print, NL]),
@@ -221,7 +224,7 @@ fn main() -> ExitCode {
     ]);
 
     // Value stack
-    let mut values: Vec<f64> = Vec::new();
+    let mut values: Vec<Value> = Vec::new();
 
     // Parse stack
     let mut stack: Vec<Token> = Vec::new();
@@ -231,10 +234,10 @@ fn main() -> ExitCode {
     let mut c: char = '\0';
 
     // Read the first token
-    let mut lexeme = lex(&mut c);
+    let (mut lexeme, mut value) = lex(&mut c);
 
     // Previous token
-    let mut prev_lexeme = END;
+    let mut prev_value = 0.0;
 
     loop {
         if TRACE {
@@ -252,10 +255,11 @@ fn main() -> ExitCode {
                         println!("syntax error");
                         return ExitCode::from(1);
                     }
-                    // Save previous token for use in Actions
-                    prev_lexeme = lexeme;
+                    // Save previous value for use in Actions
+                    prev_value = value;
+
                     // Read the next token
-                    lexeme = lex(&mut c);
+                    (lexeme, value) = lex(&mut c);
                 }
                 NonTerminal(non_terminal) => match table.get(&(lexeme, non_terminal)) {
                     Some(tokens) => {
@@ -295,9 +299,8 @@ fn main() -> ExitCode {
                             let a = values.epop();
                             values.push(a / b);
                         }
-                        Push => match prev_lexeme {
-                            NUMBER(x) => values.push(x),
-                            _ => panic!("Invalid state"),
+                        Push => {
+                            values.push(prev_value);
                         },
                         Print => {
                             let a = values.epop();
