@@ -164,11 +164,7 @@ fn lex(c: &mut char) -> (ETerminal, Value) {
             '/' => DIVIDE,
             '(' => OP,
             ')' => CP,
-            _ => {
-                println!("Invalid char {}", *c);
-                *c = getc();
-                continue;
-            }
+            _ => RESET,
         };
         *c = '\0';
         return (terminal, val);
